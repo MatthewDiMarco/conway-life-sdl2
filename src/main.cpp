@@ -5,12 +5,15 @@
 // Constants
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
-const int UNIT_SIZE = 5;
+const int UNIT_SIZE = 10;
 
 // Globals
 SDL_Window *main_window;
 SDL_Renderer *main_renderer;
 GameState *game_state;
+bool paused = true;
+int step_length = 10;
+Uint64 delay = step_length;
 
 //
 // Setup everything needed for the game loop
@@ -45,17 +48,6 @@ int initialise()
     // Handle game creation
     game_state = create_game_state(WINDOW_WIDTH, WINDOW_HEIGHT, UNIT_SIZE);
 
-    // TEMP dummy state
-    game_state->cell_buffer_1[20][20] = 1;
-    game_state->cell_buffer_2[20][20] = 1;
-    game_state->cell_buffer_1[20][21] = 1;
-    game_state->cell_buffer_2[20][21] = 1;
-    game_state->cell_buffer_1[21][20] = 1;
-    game_state->cell_buffer_2[21][20] = 1;
-    game_state->cell_buffer_1[21][21] = 1;
-    game_state->cell_buffer_2[21][21] = 1;
-    // END TEMP
-
     return EXIT_SUCCESS;
 }
 
@@ -68,6 +60,25 @@ void shutdown()
     SDL_DestroyRenderer(main_renderer);
     SDL_Quit();
     destroy_game_state(game_state);
+}
+
+//
+// Called every frame for processing game state
+//
+void update()
+{
+    Uint64 ticks = SDL_GetTicks64();
+    if (!paused && ticks >= delay)
+    {
+        delay = ticks + step_length;
+        for (int ii = 0; ii < game_state->CELLS_WIDE; ii++)
+        {
+            for (int jj = 0; jj < game_state->CELLS_HIGH; jj++)
+            {
+                process_cell(game_state, ii, jj);
+            }
+        }
+    }
 }
 
 //
@@ -109,23 +120,60 @@ int main()
         shutdown();
     }
 
-    // Game loop start
+    int xMouse, yMouse;
     SDL_Event event;
     bool quit = false;
+
+    // Game loop start
     while (!quit)
     {
         if (SDL_PollEvent(&event))
         {
             switch (event.type)
             {
+            case SDL_MOUSEBUTTONDOWN:
+            {
+                SDL_GetMouseState(&xMouse, &yMouse);
+                int xMatrix = xMouse / UNIT_SIZE;
+                int yMatrix = yMouse / UNIT_SIZE;
+                if (xMatrix >= 0 && xMatrix < game_state->CELLS_WIDE &&
+                    yMatrix >= 0 && yMatrix < game_state->CELLS_HIGH)
+                {
+                    for (int ii = xMatrix - 10; ii < xMatrix + 10; ii++)
+                    {
+                        for (int jj = yMatrix - 10; jj < yMatrix + 10; jj++)
+                        {
+                            spawn_cell(game_state, ii, jj);
+                        }
+                    }
+                }
+                break;
+            }
+
             case SDL_KEYDOWN:
+            {
                 if (event.key.keysym.sym == SDLK_ESCAPE)
                 {
                     quit = true;
                 }
+                if (event.key.keysym.sym == SDLK_SPACE)
+                {
+                    paused = !paused;
+                    if (paused)
+                    {
+                        std::cout << "paused" << std::endl;
+                    }
+                    else
+                    {
+                        std::cout << "resumed" << std::endl;
+                    }
+                }
                 break;
             }
+            }
         }
+
+        update();
         draw();
     }
 
