@@ -1,13 +1,16 @@
+/**
+ * Container for all related game state.
+ */
 typedef struct
 {
-    int **cell_buffer_1;
-    int **cell_buffer_2;
+    int **front_buffer;
+    int **back_buffer;
     int CELLS_WIDE;
     int CELLS_HIGH;
 } GameState;
 
 /**
- * Creates a grid as per the provided arguments.
+ * Creates a grid of cells, where each cell is size "unit_size".
  *
  * \param width width of the grid (e.g. the screen)
  * \param height height of the grid (e.g. the screen)
@@ -17,7 +20,7 @@ typedef struct
 GameState *create_game_state(int width, int height, int unit_size);
 
 /**
- * Applies the game of life rules to the given cell.
+ * Applies the game rules to the given cell.
  *
  * \param game_state pointer to the GameState
  * \param row cell's x location
@@ -36,6 +39,19 @@ void process_cell(GameState *game_state, int row, int col);
  * \param col cell's y location
  */
 void spawn_cell(GameState *game_state, int row, int col);
+
+/**
+ * Brings the back buffer to the front for rendering; to be called once
+ * cell processing is complete.
+ *
+ * The game state persists two identical matrix buffers: the back and front.
+ * The front buffer represents the current source of truth, and is used for
+ * rendering; the back buffer is reserved for updating state, so that the
+ * currently rendered state remains unaffected.
+ *
+ * \param game_state pointer to the GameState
+ */
+void swap_buffers(GameState *game_state);
 
 /**
  * Frees all heap memory associated with a GameState struct.

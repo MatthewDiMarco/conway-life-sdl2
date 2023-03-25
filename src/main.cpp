@@ -5,15 +5,20 @@
 // Constants
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
-const int UNIT_SIZE = 10;
+const int UNIT_SIZE = 2;
 
-// Globals
+// Demo globals
 SDL_Window *main_window;
 SDL_Renderer *main_renderer;
+SDL_Event event;
 GameState *game_state;
 bool paused = true;
-int step_length = 10;
+bool quit = false;
+bool updating = false;
+int step_length = 1;
+int xMouse, yMouse;
 Uint64 delay = step_length;
+Uint64 ticks;
 
 //
 // Setup everything needed for the game loop
@@ -63,40 +68,81 @@ void shutdown()
 }
 
 //
-// Called every frame for processing game state
+// Called every frame for handling input events
 //
-void update()
+void input()
 {
-    Uint64 ticks = SDL_GetTicks64();
-    if (!paused && ticks >= delay)
+    if (SDL_PollEvent(&event))
     {
-        delay = ticks + step_length;
-        for (int ii = 0; ii < game_state->CELLS_WIDE; ii++)
+        switch (event.type)
         {
-            for (int jj = 0; jj < game_state->CELLS_HIGH; jj++)
+        case SDL_MOUSEBUTTONDOWN:
+        {
+            SDL_GetMouseState(&xMouse, &yMouse);
+            int xMatrix = xMouse / UNIT_SIZE;
+            int yMatrix = yMouse / UNIT_SIZE;
+            if (xMatrix >= 0 && xMatrix < game_state->CELLS_WIDE &&
+                yMatrix >= 0 && yMatrix < game_state->CELLS_HIGH)
             {
-                process_cell(game_state, ii, jj);
+                for (int ii = xMatrix - 10; ii < xMatrix + 10; ii++)
+                {
+                    for (int jj = yMatrix - 10; jj < yMatrix + 10; jj++)
+                    {
+                        spawn_cell(game_state, ii, jj);
+                    }
+                }
             }
+            break;
+        }
+
+        case SDL_KEYDOWN:
+        {
+            if (event.key.keysym.sym == SDLK_ESCAPE)
+            {
+                quit = true;
+            }
+            if (event.key.keysym.sym == SDLK_SPACE)
+            {
+                paused = !paused;
+                if (paused)
+                {
+                    std::cout << "paused" << std::endl;
+                }
+                else
+                {
+                    std::cout << "resumed" << std::endl;
+                }
+            }
+            break;
+        }
         }
     }
 }
 
 //
-// Called every frame for rendering game state to the window
+// Called every frame for processing game state
 //
-void draw()
+void update()
 {
+    ticks = SDL_GetTicks64();
+    updating = !paused && ticks >= delay;
+    if (updating)
+    {
+        delay = ticks + step_length;
+    }
+
+    // Background
     SDL_SetRenderDrawColor(main_renderer, 55, 55, 55, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(main_renderer);
 
+    // Cells
     SDL_SetRenderDrawColor(main_renderer, 245, 245, 245, SDL_ALPHA_OPAQUE);
     for (int ii = 0; ii < game_state->CELLS_WIDE; ii++)
     {
         for (int jj = 0; jj < game_state->CELLS_HIGH; jj++)
         {
-            game_state->cell_buffer_1[ii][jj] = game_state->cell_buffer_2[ii][jj];
-
-            if (game_state->cell_buffer_1[ii][jj] == 1)
+            // Render cells
+            if (game_state->front_buffer[ii][jj] == 1)
             {
                 SDL_Rect rectangle = {
                     (ii * UNIT_SIZE),
@@ -104,9 +150,22 @@ void draw()
                     UNIT_SIZE, UNIT_SIZE};
                 SDL_RenderFillRect(main_renderer, &rectangle);
             }
+
+            // Process cells
+            if (updating)
+            {
+                process_cell(game_state, ii, jj);
+            }
         }
     }
 
+    // Bring the processed cells to the front for rendering on the next call
+    if (updating)
+    {
+        swap_buffers(game_state);
+    }
+
+    // Commit render
     SDL_RenderPresent(main_renderer);
 }
 
@@ -120,64 +179,12 @@ int main()
         shutdown();
     }
 
-    int xMouse, yMouse;
-    SDL_Event event;
-    bool quit = false;
-
-    // Game loop start
     while (!quit)
     {
-        if (SDL_PollEvent(&event))
-        {
-            switch (event.type)
-            {
-            case SDL_MOUSEBUTTONDOWN:
-            {
-                SDL_GetMouseState(&xMouse, &yMouse);
-                int xMatrix = xMouse / UNIT_SIZE;
-                int yMatrix = yMouse / UNIT_SIZE;
-                if (xMatrix >= 0 && xMatrix < game_state->CELLS_WIDE &&
-                    yMatrix >= 0 && yMatrix < game_state->CELLS_HIGH)
-                {
-                    for (int ii = xMatrix - 10; ii < xMatrix + 10; ii++)
-                    {
-                        for (int jj = yMatrix - 10; jj < yMatrix + 10; jj++)
-                        {
-                            spawn_cell(game_state, ii, jj);
-                        }
-                    }
-                }
-                break;
-            }
-
-            case SDL_KEYDOWN:
-            {
-                if (event.key.keysym.sym == SDLK_ESCAPE)
-                {
-                    quit = true;
-                }
-                if (event.key.keysym.sym == SDLK_SPACE)
-                {
-                    paused = !paused;
-                    if (paused)
-                    {
-                        std::cout << "paused" << std::endl;
-                    }
-                    else
-                    {
-                        std::cout << "resumed" << std::endl;
-                    }
-                }
-                break;
-            }
-            }
-        }
-
+        input();
         update();
-        draw();
     }
 
-    // Exit gracefully
     shutdown();
     return EXIT_SUCCESS;
 }
