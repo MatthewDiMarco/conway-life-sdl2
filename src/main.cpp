@@ -1,16 +1,19 @@
 #include <iostream>
 #include <SDL2/SDL.h>
+#include "game.hpp"
 
 // Constants
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
+const int UNIT_SIZE = 5;
 
 // Globals
 SDL_Window *main_window;
 SDL_Renderer *main_renderer;
+GameState *game_state;
 
 //
-// Initialise sdl2 and game state
+// Setup everything needed for the game loop
 //
 int initialise()
 {
@@ -39,31 +42,65 @@ int initialise()
     // Handle renderer creation
     main_renderer = SDL_CreateRenderer(main_window, -1, SDL_RENDERER_PRESENTVSYNC);
 
+    // Handle game creation
+    game_state = create_game_state(WINDOW_WIDTH, WINDOW_HEIGHT, UNIT_SIZE);
+
+    // TEMP dummy state
+    game_state->cell_buffer_1[20][20] = 1;
+    game_state->cell_buffer_2[20][20] = 1;
+    game_state->cell_buffer_1[20][21] = 1;
+    game_state->cell_buffer_2[20][21] = 1;
+    game_state->cell_buffer_1[21][20] = 1;
+    game_state->cell_buffer_2[21][20] = 1;
+    game_state->cell_buffer_1[21][21] = 1;
+    game_state->cell_buffer_2[21][21] = 1;
+    // END TEMP
+
     return EXIT_SUCCESS;
 }
 
 //
-// Peform cleanup
+// Called before quitting for cleanup
 //
 void shutdown()
 {
     SDL_DestroyWindow(main_window);
     SDL_DestroyRenderer(main_renderer);
     SDL_Quit();
+    destroy_game_state(game_state);
 }
 
 //
-// Called every frame for rendering the game state to the window
+// Called every frame for rendering game state to the window
 //
 void draw()
 {
     SDL_SetRenderDrawColor(main_renderer, 55, 55, 55, SDL_ALPHA_OPAQUE);
     SDL_RenderClear(main_renderer);
+
+    SDL_SetRenderDrawColor(main_renderer, 245, 245, 245, SDL_ALPHA_OPAQUE);
+    for (int ii = 0; ii < game_state->CELLS_WIDE; ii++)
+    {
+        for (int jj = 0; jj < game_state->CELLS_HIGH; jj++)
+        {
+            game_state->cell_buffer_1[ii][jj] = game_state->cell_buffer_2[ii][jj];
+
+            if (game_state->cell_buffer_1[ii][jj] == 1)
+            {
+                SDL_Rect rectangle = {
+                    (ii * UNIT_SIZE),
+                    (jj * UNIT_SIZE),
+                    UNIT_SIZE, UNIT_SIZE};
+                SDL_RenderFillRect(main_renderer, &rectangle);
+            }
+        }
+    }
+
     SDL_RenderPresent(main_renderer);
 }
 
 //
-// Demo program
+// Run demo
 //
 int main()
 {
@@ -72,7 +109,7 @@ int main()
         shutdown();
     }
 
-    // Main loop start
+    // Game loop start
     SDL_Event event;
     bool quit = false;
     while (!quit)
