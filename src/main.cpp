@@ -1,25 +1,32 @@
 #include <iostream>
 #include <SDL2/SDL.h>
 #include "game.hpp"
+#include "render.hpp"
 
 // Constants
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
-const int UNIT_SIZE = 5;
+const int UNIT_SIZE = 20;
+const int MIN_SPAWN_BOX_SIZE = 1;
+const int MAX_SPAWN_BOX_SIZE = 25;
 
-// Demo globals
+// Global data
 SDL_Window *main_window;
 SDL_Renderer *main_renderer;
 SDL_Event event;
 GameState *game_state;
+Uint64 delay;
+Uint64 ticks;
+int x_mouse, y_mouse;
+int mouse_buttons_state;
+
+// Global controls
 bool paused = true;
 bool quit = false;
 bool updating = false;
-bool fill_cells = false;
+bool fill_cells = true;
 int step_length = 1;
-int xMouse, yMouse;
-Uint64 delay = step_length;
-Uint64 ticks;
+int spawn_box_size = 3;
 
 //
 // Setup everything needed for the game loop
@@ -69,30 +76,52 @@ void shutdown()
 }
 
 //
-// Called every frame for handling input events
+// Called every frame for handling input
 //
 void input()
 {
+    // Respond to mouse
+    mouse_buttons_state = SDL_GetMouseState(&x_mouse, &y_mouse);
+    if (mouse_buttons_state == 1 || mouse_buttons_state == 4)
+    {
+        int offset = floor(spawn_box_size / 2);
+        int row_selected = x_mouse / UNIT_SIZE;
+        int col_selected = y_mouse / UNIT_SIZE;
+        for (int ii = row_selected; ii < row_selected + spawn_box_size; ii++)
+        {
+            for (int jj = col_selected; jj < col_selected + spawn_box_size; jj++)
+            {
+                int row = ii - offset;
+                int col = jj - offset;
+                if (mouse_buttons_state == 1)
+                {
+                    spawn_cell(game_state, row, col);
+                }
+                else if (mouse_buttons_state == 4)
+                {
+                    kill_cell(game_state, row, col);
+                }
+            }
+        }
+    }
+
+    // Respond to events
     if (SDL_PollEvent(&event))
     {
         switch (event.type)
         {
-        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEWHEEL:
         {
-            SDL_GetMouseState(&xMouse, &yMouse);
-            int xMatrix = xMouse / UNIT_SIZE;
-            int yMatrix = yMouse / UNIT_SIZE;
-            if (xMatrix >= 0 && xMatrix < game_state->CELLS_WIDE &&
-                yMatrix >= 0 && yMatrix < game_state->CELLS_HIGH)
+            int adjusted = spawn_box_size;
+            if (event.wheel.y > 0)
             {
-                for (int ii = xMatrix - 10; ii < xMatrix + 10; ii++)
-                {
-                    for (int jj = yMatrix - 10; jj < yMatrix + 10; jj++)
-                    {
-                        spawn_cell(game_state, ii, jj);
-                    }
-                }
+                adjusted++;
             }
+            else if (event.wheel.y < 0)
+            {
+                adjusted--;
+            }
+            spawn_box_size = std::clamp(adjusted, MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
             break;
         }
 
@@ -137,11 +166,11 @@ void update()
     }
 
     // Background
-    SDL_SetRenderDrawColor(main_renderer, 55, 55, 55, SDL_ALPHA_OPAQUE);
+    render_set_color(main_renderer, COLOR_GRAY_DARK);
     SDL_RenderClear(main_renderer);
 
     // Cells
-    SDL_SetRenderDrawColor(main_renderer, 245, 245, 245, SDL_ALPHA_OPAQUE);
+    render_set_color(main_renderer, COLOR_WHITE);
     for (int ii = 0; ii < game_state->CELLS_WIDE; ii++)
     {
         for (int jj = 0; jj < game_state->CELLS_HIGH; jj++)
@@ -149,19 +178,8 @@ void update()
             // Render cells
             if (game_state->front_buffer[ii][jj] == 1)
             {
-                SDL_Rect rectangle = {
-                    (ii * UNIT_SIZE),
-                    (jj * UNIT_SIZE),
-                    UNIT_SIZE, UNIT_SIZE};
-
-                if (fill_cells)
-                {
-                    SDL_RenderFillRect(main_renderer, &rectangle);
-                }
-                else
-                {
-                    SDL_RenderDrawRect(main_renderer, &rectangle);
-                }
+                render_rectangle(main_renderer, ii * UNIT_SIZE, jj * UNIT_SIZE,
+                                 UNIT_SIZE, UNIT_SIZE, fill_cells);
             }
 
             // Process cells
@@ -178,6 +196,14 @@ void update()
         swap_buffers(game_state);
     }
 
+    // Spawn area
+    render_set_color(main_renderer, COLOR_GRAY_LIGHT);
+    render_rectangle(main_renderer,
+                     ((x_mouse / UNIT_SIZE) * UNIT_SIZE) - ((spawn_box_size) / 2 * UNIT_SIZE),
+                     ((y_mouse / UNIT_SIZE) * UNIT_SIZE) - ((spawn_box_size) / 2 * UNIT_SIZE),
+                     (spawn_box_size)*UNIT_SIZE,
+                     (spawn_box_size)*UNIT_SIZE, false);
+
     // Commit render
     SDL_RenderPresent(main_renderer);
 }
@@ -192,6 +218,7 @@ int main()
         shutdown();
     }
 
+    delay = step_length;
     while (!quit)
     {
         input();

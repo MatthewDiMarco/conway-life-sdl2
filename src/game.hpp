@@ -41,6 +41,18 @@ void process_cell(GameState *game_state, int row, int col);
 void spawn_cell(GameState *game_state, int row, int col);
 
 /**
+ * Kill a cell at the specified location.
+ *
+ * The function applies a modulo wrapper to ensure the cells remain
+ * within the buffer on a toroidal surface.
+ *
+ * \param game_state pointer to the GameState
+ * \param row cell's x location
+ * \param col cell's y location
+ */
+void kill_cell(GameState *game_state, int row, int col);
+
+/**
  * Brings the back buffer to the front for rendering; to be called once
  * cell processing is complete.
  *

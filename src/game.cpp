@@ -78,6 +78,13 @@ void spawn_cell(GameState *game_state, int row, int col)
     game_state->front_buffer[row][col] = 1;
 }
 
+void kill_cell(GameState *game_state, int row, int col)
+{
+    row = mod(row, game_state->CELLS_WIDE);
+    col = mod(col, game_state->CELLS_HIGH);
+    game_state->front_buffer[row][col] = 0;
+}
+
 void swap_buffers(GameState *game_state)
 {
     int **temp = game_state->front_buffer;
