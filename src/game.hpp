@@ -25,8 +25,9 @@ GameState *create_game_state(int width, int height, int unit_size);
  * \param game_state pointer to the GameState
  * \param row cell's x location
  * \param col cell's y location
+ * \param population_size pointer to population tracker
  */
-void process_cell(GameState *game_state, int row, int col);
+void process_cell(GameState *game_state, int row, int col, int *population_size);
 
 /**
  * Create a cell at the specified location.
@@ -37,8 +38,9 @@ void process_cell(GameState *game_state, int row, int col);
  * \param game_state pointer to the GameState
  * \param row cell's x location
  * \param col cell's y location
+ * \param population_size pointer to population tracker
  */
-void spawn_cell(GameState *game_state, int row, int col);
+void spawn_cell(GameState *game_state, int row, int col, int *population_size);
 
 /**
  * Kill a cell at the specified location.
@@ -49,8 +51,9 @@ void spawn_cell(GameState *game_state, int row, int col);
  * \param game_state pointer to the GameState
  * \param row cell's x location
  * \param col cell's y location
+ * \param population_size pointer to population tracker
  */
-void kill_cell(GameState *game_state, int row, int col);
+void kill_cell(GameState *game_state, int row, int col, int *population_size);
 
 /**
  * Brings the back buffer to the front for rendering; to be called once

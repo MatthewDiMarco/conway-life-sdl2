@@ -1,21 +1,17 @@
 #include <iostream>
 #include "game.hpp"
-
-static int mod(int a, int base)
-{
-    return ((a % base) + base) % base;
-}
+#include "util.hpp"
 
 static int find_num_alive_neighbours(GameState *game_state, int row, int col)
 {
-    return (game_state->front_buffer[row][mod(col - 1, game_state->CELLS_HIGH)] +
-            game_state->front_buffer[row][mod(col + 1, game_state->CELLS_HIGH)] +
-            game_state->front_buffer[mod(row - 1, game_state->CELLS_WIDE)][col] +
-            game_state->front_buffer[mod(row + 1, game_state->CELLS_WIDE)][col] +
-            game_state->front_buffer[mod(row - 1, game_state->CELLS_WIDE)][mod(col - 1, game_state->CELLS_HIGH)] +
-            game_state->front_buffer[mod(row - 1, game_state->CELLS_WIDE)][mod(col + 1, game_state->CELLS_HIGH)] +
-            game_state->front_buffer[mod(row + 1, game_state->CELLS_WIDE)][mod(col - 1, game_state->CELLS_HIGH)] +
-            game_state->front_buffer[mod(row + 1, game_state->CELLS_WIDE)][mod(col + 1, game_state->CELLS_HIGH)]);
+    return (signnum(game_state->front_buffer[row][mod(col - 1, game_state->CELLS_HIGH)]) +
+            signnum(game_state->front_buffer[row][mod(col + 1, game_state->CELLS_HIGH)]) +
+            signnum(game_state->front_buffer[mod(row - 1, game_state->CELLS_WIDE)][col]) +
+            signnum(game_state->front_buffer[mod(row + 1, game_state->CELLS_WIDE)][col]) +
+            signnum(game_state->front_buffer[mod(row - 1, game_state->CELLS_WIDE)][mod(col - 1, game_state->CELLS_HIGH)]) +
+            signnum(game_state->front_buffer[mod(row - 1, game_state->CELLS_WIDE)][mod(col + 1, game_state->CELLS_HIGH)]) +
+            signnum(game_state->front_buffer[mod(row + 1, game_state->CELLS_WIDE)][mod(col - 1, game_state->CELLS_HIGH)]) +
+            signnum(game_state->front_buffer[mod(row + 1, game_state->CELLS_WIDE)][mod(col + 1, game_state->CELLS_HIGH)]));
 }
 
 GameState *create_game_state(int width, int height, int unit_size)
@@ -40,20 +36,21 @@ GameState *create_game_state(int width, int height, int unit_size)
     return game_state;
 }
 
-void process_cell(GameState *game_state, int row, int col)
+void process_cell(GameState *game_state, int row, int col, int *population_size)
 {
     int alive_neighbours = find_num_alive_neighbours(game_state, row, col);
 
     // cell alive
-    if (game_state->front_buffer[row][col] == 1)
+    if (game_state->front_buffer[row][col] >= 1)
     {
         if (alive_neighbours < 2 || alive_neighbours > 3)
         {
             game_state->back_buffer[row][col] = 0;
+            (*population_size)--;
         }
         else
         {
-            game_state->back_buffer[row][col] = 1;
+            game_state->back_buffer[row][col] = std::min(game_state->back_buffer[row][col] + 1, 255);
         }
     }
 
@@ -63,6 +60,7 @@ void process_cell(GameState *game_state, int row, int col)
         if (alive_neighbours == 3)
         {
             game_state->back_buffer[row][col] = 1;
+            (*population_size)++;
         }
         else
         {
@@ -71,18 +69,26 @@ void process_cell(GameState *game_state, int row, int col)
     }
 }
 
-void spawn_cell(GameState *game_state, int row, int col)
+void spawn_cell(GameState *game_state, int row, int col, int *population_size)
 {
     row = mod(row, game_state->CELLS_WIDE);
     col = mod(col, game_state->CELLS_HIGH);
-    game_state->front_buffer[row][col] = 1;
+    if (game_state->front_buffer[row][col] < 1)
+    {
+        game_state->front_buffer[row][col] = 1;
+        (*population_size)++;
+    }
 }
 
-void kill_cell(GameState *game_state, int row, int col)
+void kill_cell(GameState *game_state, int row, int col, int *population_size)
 {
     row = mod(row, game_state->CELLS_WIDE);
     col = mod(col, game_state->CELLS_HIGH);
-    game_state->front_buffer[row][col] = 0;
+    if (game_state->front_buffer[row][col] != 0)
+    {
+        game_state->front_buffer[row][col] = 0;
+        (*population_size)--;
+    }
 }
 
 void swap_buffers(GameState *game_state)

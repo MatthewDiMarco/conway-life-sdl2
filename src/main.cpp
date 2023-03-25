@@ -2,11 +2,12 @@
 #include <SDL2/SDL.h>
 #include "game.hpp"
 #include "render.hpp"
+#include "util.hpp"
 
 // Constants
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
-const int UNIT_SIZE = 2;
+const int UNIT_SIZE = 5;
 const int STEP_INCREMENT = 25;
 const int MIN_SPAWN_BOX_SIZE = 1;
 const int MAX_SPAWN_BOX_SIZE = (WINDOW_HEIGHT / UNIT_SIZE) / 2;
@@ -22,12 +23,14 @@ Uint64 delay;
 Uint64 ticks;
 int x_mouse, y_mouse;
 int mouse_buttons_state;
+int population_size;
 
 // Global controls
 bool paused = true;
 bool quit = false;
 bool fill_cells = true;
-int step_length = 50;
+bool color_cells = true;
+int step_length = 0;
 int spawn_box_size = 3;
 
 //
@@ -60,8 +63,9 @@ int initialise()
     // Handle renderer creation
     main_renderer = SDL_CreateRenderer(main_window, -1, SDL_RENDERER_PRESENTVSYNC);
 
-    // Handle game creation
+    // Handle game state creation
     game_state = create_game_state(WINDOW_WIDTH, WINDOW_HEIGHT, UNIT_SIZE);
+    population_size = 0;
 
     return EXIT_SUCCESS;
 }
@@ -97,11 +101,11 @@ void input()
                 int col = jj - offset;
                 if (mouse_buttons_state == 1)
                 {
-                    spawn_cell(game_state, row, col);
+                    spawn_cell(game_state, row, col, &population_size);
                 }
                 else if (mouse_buttons_state == 4)
                 {
-                    kill_cell(game_state, row, col);
+                    kill_cell(game_state, row, col, &population_size);
                 }
             }
         }
@@ -114,13 +118,13 @@ void input()
         {
         case SDL_MOUSEWHEEL:
         {
-            int signnum = (0 < event.wheel.y) - (event.wheel.y < 0); // [-1, 0, 1]
-            if (signnum == 1)
+            int sign = signnum(event.wheel.y);
+            if (sign == 1)
             {
                 spawn_box_size = std::clamp(spawn_box_size * 2,
                                             MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
             }
-            else if (signnum == -1)
+            else if (sign == -1)
             {
                 spawn_box_size = std::clamp(spawn_box_size / 2,
                                             MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
@@ -137,20 +141,37 @@ void input()
             if (event.key.keysym.sym == SDLK_SPACE)
             {
                 paused = !paused;
+                std::cout << "PAUSED: " << paused << std::endl;
             }
             if (event.key.keysym.sym == SDLK_f)
             {
                 fill_cells = !fill_cells;
+                std::cout << "FILL: " << fill_cells << std::endl;
+            }
+            if (event.key.keysym.sym == SDLK_c)
+            {
+                color_cells = !color_cells;
+                std::cout << "COLOR: " << color_cells << std::endl;
             }
             if (event.key.keysym.sym == SDLK_UP)
             {
-                step_length = std::clamp(step_length + STEP_INCREMENT,
-                                         MIN_STEP_LENGTH, MAX_STEP_LENGTH);
+                int updated_step = std::clamp(step_length + STEP_INCREMENT,
+                                              MIN_STEP_LENGTH, MAX_STEP_LENGTH);
+                if (updated_step != step_length)
+                {
+                    step_length = updated_step;
+                    std::cout << "STEP: " << step_length << std::endl;
+                }
             }
             if (event.key.keysym.sym == SDLK_DOWN)
             {
-                step_length = std::clamp(step_length - STEP_INCREMENT,
-                                         MIN_STEP_LENGTH, MAX_STEP_LENGTH);
+                int updated_step = std::clamp(step_length - STEP_INCREMENT,
+                                              MIN_STEP_LENGTH, MAX_STEP_LENGTH);
+                if (updated_step != step_length)
+                {
+                    step_length = updated_step;
+                    std::cout << "STEP: " << step_length << std::endl;
+                }
             }
             break;
         }
@@ -181,8 +202,18 @@ void update()
         for (int jj = 0; jj < game_state->CELLS_HIGH; jj++)
         {
             // Render cells
-            if (game_state->front_buffer[ii][jj] == 1)
+            if (game_state->front_buffer[ii][jj] >= 1)
             {
+                if (color_cells)
+                {
+                    int distance_from_mouse = std::clamp(
+                        find_distance(x_mouse, y_mouse, ii * UNIT_SIZE, jj * UNIT_SIZE), 1, 255);
+                    render_set_color(main_renderer,
+                                     {255 - game_state->front_buffer[ii][jj],
+                                      game_state->front_buffer[ii][jj],
+                                      255 - distance_from_mouse,
+                                      SDL_ALPHA_OPAQUE});
+                }
                 render_rectangle(main_renderer, ii * UNIT_SIZE, jj * UNIT_SIZE,
                                  UNIT_SIZE, UNIT_SIZE, fill_cells);
             }
@@ -190,7 +221,7 @@ void update()
             // Process cells
             if (updating)
             {
-                process_cell(game_state, ii, jj);
+                process_cell(game_state, ii, jj, &population_size);
             }
         }
     }
