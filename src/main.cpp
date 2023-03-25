@@ -7,8 +7,11 @@
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
 const int UNIT_SIZE = 20;
+const int STEP_INCREMENT = 25;
 const int MIN_SPAWN_BOX_SIZE = 1;
 const int MAX_SPAWN_BOX_SIZE = 25;
+const int MIN_STEP_LENGTH = 0;
+const int MAX_STEP_LENGTH = 100;
 
 // Global data
 SDL_Window *main_window;
@@ -23,9 +26,8 @@ int mouse_buttons_state;
 // Global controls
 bool paused = true;
 bool quit = false;
-bool updating = false;
 bool fill_cells = true;
-int step_length = 1;
+int step_length = 50;
 int spawn_box_size = 3;
 
 //
@@ -112,16 +114,9 @@ void input()
         {
         case SDL_MOUSEWHEEL:
         {
-            int adjusted = spawn_box_size;
-            if (event.wheel.y > 0)
-            {
-                adjusted++;
-            }
-            else if (event.wheel.y < 0)
-            {
-                adjusted--;
-            }
-            spawn_box_size = std::clamp(adjusted, MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
+            int signnum = (0 < event.wheel.y) - (event.wheel.y < 0);
+            spawn_box_size = std::clamp(spawn_box_size + signnum,
+                                        MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
             break;
         }
 
@@ -131,21 +126,23 @@ void input()
             {
                 quit = true;
             }
+            if (event.key.keysym.sym == SDLK_SPACE)
+            {
+                paused = !paused;
+            }
             if (event.key.keysym.sym == SDLK_f)
             {
                 fill_cells = !fill_cells;
             }
-            if (event.key.keysym.sym == SDLK_SPACE)
+            if (event.key.keysym.sym == SDLK_UP)
             {
-                paused = !paused;
-                if (paused)
-                {
-                    std::cout << "paused" << std::endl;
-                }
-                else
-                {
-                    std::cout << "resumed" << std::endl;
-                }
+                step_length = std::clamp(step_length + STEP_INCREMENT,
+                                         MIN_STEP_LENGTH, MAX_STEP_LENGTH);
+            }
+            if (event.key.keysym.sym == SDLK_DOWN)
+            {
+                step_length = std::clamp(step_length - STEP_INCREMENT,
+                                         MIN_STEP_LENGTH, MAX_STEP_LENGTH);
             }
             break;
         }
@@ -159,7 +156,7 @@ void input()
 void update()
 {
     ticks = SDL_GetTicks64();
-    updating = !paused && ticks >= delay;
+    bool updating = !paused && ticks >= delay;
     if (updating)
     {
         delay = ticks + step_length;
