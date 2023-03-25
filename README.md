@@ -8,14 +8,14 @@ Create and destroy cells using LMB and RMB, respectively. Watch the beauty unfol
 Cells record their age. Red cells are volatile and changing; the older stationary cells emerge as green. Hovering the mouse over groups of cells will illuminate them.
 
 ## Controls
-- Space:        pause/play
-- F:            toggle wireframe
-- C:            toggle colorization
-- Up arrow:     slow down
-- Down arrow:   speed up
-- Left mouse:   spawn cell
-- Right mouse:  delete cell
-- Mouse wheel:  adjust spawn perimeter
+- `Space`:        pause/play
+- `F`:            toggle wireframe
+- `C`:            toggle colorization
+- `Up arrow`:     slow down
+- `Down arrow`:   speed up
+- `Left mouse`:   spawn cell
+- `Right mouse`:  delete cell
+- `Mouse wheel`:  adjust spawn perimeter
 
 ## Setup: OS X
 ### Dependencies
@@ -26,9 +26,9 @@ brew install sdl2
 
 Although not required by this project, see also:
 ```
-brew install sdl2_ttf
-brew install sdl2_image
-brew install sdl2_mixer
+sdl2_ttf
+sdl2_image
+sdl2_mixer
 ```
 
 ### Compiler
