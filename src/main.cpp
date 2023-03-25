@@ -6,10 +6,10 @@
 // Constants
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
-const int UNIT_SIZE = 20;
+const int UNIT_SIZE = 2;
 const int STEP_INCREMENT = 25;
 const int MIN_SPAWN_BOX_SIZE = 1;
-const int MAX_SPAWN_BOX_SIZE = 25;
+const int MAX_SPAWN_BOX_SIZE = (WINDOW_HEIGHT / UNIT_SIZE) / 2;
 const int MIN_STEP_LENGTH = 0;
 const int MAX_STEP_LENGTH = 100;
 
@@ -114,9 +114,17 @@ void input()
         {
         case SDL_MOUSEWHEEL:
         {
-            int signnum = (0 < event.wheel.y) - (event.wheel.y < 0);
-            spawn_box_size = std::clamp(spawn_box_size + signnum,
-                                        MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
+            int signnum = (0 < event.wheel.y) - (event.wheel.y < 0); // [-1, 0, 1]
+            if (signnum == 1)
+            {
+                spawn_box_size = std::clamp(spawn_box_size * 2,
+                                            MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
+            }
+            else if (signnum == -1)
+            {
+                spawn_box_size = std::clamp(spawn_box_size / 2,
+                                            MIN_SPAWN_BOX_SIZE, MAX_SPAWN_BOX_SIZE);
+            }
             break;
         }
 
