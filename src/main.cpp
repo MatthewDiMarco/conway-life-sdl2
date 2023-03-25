@@ -5,7 +5,7 @@
 // Constants
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
-const int UNIT_SIZE = 2;
+const int UNIT_SIZE = 5;
 
 // Demo globals
 SDL_Window *main_window;
@@ -15,6 +15,7 @@ GameState *game_state;
 bool paused = true;
 bool quit = false;
 bool updating = false;
+bool fill_cells = false;
 int step_length = 1;
 int xMouse, yMouse;
 Uint64 delay = step_length;
@@ -101,6 +102,10 @@ void input()
             {
                 quit = true;
             }
+            if (event.key.keysym.sym == SDLK_f)
+            {
+                fill_cells = !fill_cells;
+            }
             if (event.key.keysym.sym == SDLK_SPACE)
             {
                 paused = !paused;
@@ -148,7 +153,15 @@ void update()
                     (ii * UNIT_SIZE),
                     (jj * UNIT_SIZE),
                     UNIT_SIZE, UNIT_SIZE};
-                SDL_RenderFillRect(main_renderer, &rectangle);
+
+                if (fill_cells)
+                {
+                    SDL_RenderFillRect(main_renderer, &rectangle);
+                }
+                else
+                {
+                    SDL_RenderDrawRect(main_renderer, &rectangle);
+                }
             }
 
             // Process cells
